@@ -1,0 +1,362 @@
+// AgriFarm — Prisma schema generated from the approved AgriFarm_PostgreSQL_Schema.dbml.
+// Table, column and enum names in PostgreSQL are preserved exactly via @@map / @map.
+// Prisma-side names are PascalCase (models) and camelCase (fields).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum UserStatus {
+  active
+  inactive
+  suspended
+
+  @@map("user_status")
+}
+
+enum FarmStatus {
+  active
+  inactive
+  archived
+
+  @@map("farm_status")
+}
+
+enum FieldStatus {
+  active
+  inactive
+
+  @@map("field_status")
+}
+
+enum CropCycleStatus {
+  planned
+  active
+  harvested
+  cancelled
+
+  @@map("crop_cycle_status")
+}
+
+enum GrowthStage {
+  preparation
+  sowing
+  germination
+  vegetative
+  flowering
+  fruiting
+  maturity
+  harvested
+
+  @@map("growth_stage")
+}
+
+enum CropHealthStatus {
+  healthy
+  needs_attention
+  affected
+  unknown
+
+  @@map("crop_health_status")
+}
+
+enum TaskType {
+  irrigation
+  fertilization
+  pesticide
+  weeding
+  planting
+  harvesting
+  inspection
+  other
+
+  @@map("task_type")
+}
+
+enum TaskStatus {
+  pending
+  in_progress
+  completed
+  cancelled
+
+  @@map("task_status")
+}
+
+enum ExpenseCategory {
+  seeds
+  fertilizer
+  pesticide
+  labour
+  irrigation
+  equipment
+  transportation
+  maintenance
+  other
+
+  @@map("expense_category")
+}
+
+enum WeatherSource {
+  api
+  manual
+
+  @@map("weather_source")
+}
+
+// ───────────────────────────── Models ─────────────────────────────
+
+model User {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName     String     @map("full_name") @db.VarChar(120)
+  email        String     @unique @db.VarChar(255)
+  passwordHash String     @map("password_hash") @db.VarChar(255)
+  phone        String?    @db.VarChar(30)
+  status       UserStatus @default(active)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  farms            Farm[]
+  assignedTasks    Task[]    @relation("TaskAssignee")
+  recordedExpenses Expense[] @relation("ExpenseRecorder")
+
+  @@map("users")
+}
+
+model Farm {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId     String     @map("owner_id") @db.Uuid
+  name        String     @db.VarChar(150)
+  description String?    @db.Text
+  address     String?    @db.Text
+  village     String?    @db.VarChar(120)
+  district    String?    @db.VarChar(120)
+  state       String?    @db.VarChar(120)
+  country     String?    @default("India") @db.VarChar(120)
+  latitude    Decimal?   @db.Decimal(9, 6)
+  longitude   Decimal?   @db.Decimal(9, 6)
+  totalArea   Decimal    @map("total_area") @db.Decimal(12, 3)
+  areaUnit    String     @default("acre") @map("area_unit") @db.VarChar(20)
+  status      FarmStatus @default(active)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner          User            @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  fields         Field[]
+  tasks          Task[]
+  expenses       Expense[]
+  harvests       Harvest[]
+  weatherRecords WeatherRecord[]
+
+  @@index([ownerId])
+  @@index([ownerId, name])
+  @@map("farms")
+}
+
+model Field {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  farmId         String      @map("farm_id") @db.Uuid
+  name           String      @db.VarChar(120)
+  area           Decimal     @db.Decimal(12, 3)
+  areaUnit       String      @default("acre") @map("area_unit") @db.VarChar(20)
+  soilType       String?     @map("soil_type") @db.VarChar(100)
+  irrigationType String?     @map("irrigation_type") @db.VarChar(100)
+  notes          String?     @db.Text
+  status         FieldStatus @default(active)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  farm       Farm        @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  cropCycles CropCycle[]
+  tasks      Task[]
+  expenses   Expense[]
+  harvests   Harvest[]
+
+  @@unique([farmId, name])
+  @@index([farmId])
+  @@map("fields")
+}
+
+model CropCatalog {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String   @unique @db.VarChar(120)
+  category            String?  @db.VarChar(100)
+  typicalDurationDays Int?     @map("typical_duration_days")
+  defaultYieldPerAcre Decimal? @map("default_yield_per_acre") @db.Decimal(12, 3)
+  yieldUnit           String?  @map("yield_unit") @db.VarChar(30)
+  description         String?  @db.Text
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cropCycles   CropCycle[]
+  marketPrices MarketPrice[]
+
+  @@map("crop_catalog")
+}
+
+model CropCycle {
+  id                          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fieldId                     String           @map("field_id") @db.Uuid
+  cropId                      String           @map("crop_id") @db.Uuid
+  season                      String?          @db.VarChar(80)
+  plantingDate                DateTime?        @map("planting_date") @db.Date
+  expectedHarvestDate         DateTime?        @map("expected_harvest_date") @db.Date
+  actualHarvestDate           DateTime?        @map("actual_harvest_date") @db.Date
+  areaCultivated              Decimal          @map("area_cultivated") @db.Decimal(12, 3)
+  areaUnit                    String           @default("acre") @map("area_unit") @db.VarChar(20)
+  expectedYield               Decimal?         @map("expected_yield") @db.Decimal(14, 3)
+  yieldUnit                   String?          @map("yield_unit") @db.VarChar(30)
+  expectedSellingPricePerUnit Decimal?         @map("expected_selling_price_per_unit") @db.Decimal(14, 2)
+  currency                    String           @default("INR") @db.Char(3)
+  growthStage                 GrowthStage      @default(preparation) @map("growth_stage")
+  healthStatus                CropHealthStatus @default(unknown) @map("health_status")
+  status                      CropCycleStatus  @default(planned)
+  notes                       String?          @db.Text
+  createdAt                   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  field    Field       @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  crop     CropCatalog @relation(fields: [cropId], references: [id], onDelete: Restrict)
+  tasks    Task[]
+  expenses Expense[]
+  harvests Harvest[]
+
+  @@index([fieldId])
+  @@index([cropId])
+  @@index([fieldId, status])
+  @@index([expectedHarvestDate])
+  @@map("crop_cycles")
+}
+
+model Task {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  farmId       String     @map("farm_id") @db.Uuid
+  fieldId      String?    @map("field_id") @db.Uuid
+  cropCycleId  String?    @map("crop_cycle_id") @db.Uuid
+  assignedTo   String?    @map("assigned_to") @db.Uuid
+  title        String     @db.VarChar(180)
+  description  String?    @db.Text
+  type         TaskType   @default(other)
+  dueAt        DateTime?  @map("due_at") @db.Timestamptz(6)
+  completedAt  DateTime?  @map("completed_at") @db.Timestamptz(6)
+  priority     String     @default("medium") @db.VarChar(20)
+  status       TaskStatus @default(pending)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  field     Field?     @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  cropCycle CropCycle? @relation(fields: [cropCycleId], references: [id], onDelete: SetNull)
+  assignee  User?      @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+
+  @@index([farmId])
+  @@index([farmId, status, dueAt])
+  @@index([cropCycleId])
+  @@index([assignedTo])
+  @@map("tasks")
+}
+
+model Expense {
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  farmId      String          @map("farm_id") @db.Uuid
+  fieldId     String?         @map("field_id") @db.Uuid
+  cropCycleId String?         @map("crop_cycle_id") @db.Uuid
+  recordedBy  String          @map("recorded_by") @db.Uuid
+  category    ExpenseCategory @default(other)
+  description String          @db.VarChar(255)
+  amount      Decimal         @db.Decimal(14, 2)
+  currency    String          @default("INR") @db.Char(3)
+  expenseDate DateTime        @map("expense_date") @db.Date
+  vendor      String?         @db.VarChar(160)
+  receiptUrl  String?         @map("receipt_url") @db.Text
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  field     Field?     @relation(fields: [fieldId], references: [id], onDelete: SetNull)
+  cropCycle CropCycle? @relation(fields: [cropCycleId], references: [id], onDelete: SetNull)
+  recorder  User       @relation("ExpenseRecorder", fields: [recordedBy], references: [id], onDelete: Restrict)
+
+  @@index([farmId])
+  @@index([farmId, expenseDate])
+  @@index([cropCycleId])
+  @@index([recordedBy])
+  @@map("expenses")
+}
+
+model Harvest {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  farmId              String   @map("farm_id") @db.Uuid
+  fieldId             String   @map("field_id") @db.Uuid
+  cropCycleId         String   @map("crop_cycle_id") @db.Uuid
+  harvestedOn         DateTime @map("harvested_on") @db.Date
+  quantity            Decimal  @db.Decimal(14, 3)
+  quantityUnit        String   @map("quantity_unit") @db.VarChar(30)
+  grade               String?  @db.VarChar(50)
+  sellingPricePerUnit Decimal? @map("selling_price_per_unit") @db.Decimal(14, 2)
+  currency            String   @default("INR") @db.Char(3)
+  buyer               String?  @db.VarChar(160)
+  notes               String?  @db.Text
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  farm      Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  field     Field     @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  cropCycle CropCycle @relation(fields: [cropCycleId], references: [id], onDelete: Cascade)
+
+  @@index([cropCycleId])
+  @@index([farmId, harvestedOn])
+  @@map("harvests")
+}
+
+model MarketPrice {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cropId         String?  @map("crop_id") @db.Uuid
+  cropName       String   @map("crop_name") @db.VarChar(120)
+  marketName     String   @map("market_name") @db.VarChar(160)
+  district       String?  @db.VarChar(120)
+  state          String?  @db.VarChar(120)
+  priceDate      DateTime @map("price_date") @db.Date
+  minPrice       Decimal? @map("min_price") @db.Decimal(14, 2)
+  maxPrice       Decimal? @map("max_price") @db.Decimal(14, 2)
+  modalPrice     Decimal? @map("modal_price") @db.Decimal(14, 2)
+  priceUnit      String   @default("INR/quintal") @map("price_unit") @db.VarChar(40)
+  source         String?  @db.VarChar(160)
+  sourceRecordId String?  @map("source_record_id") @db.VarChar(160)
+  fetchedAt      DateTime @default(now()) @map("fetched_at") @db.Timestamptz(6)
+
+  crop CropCatalog? @relation(fields: [cropId], references: [id], onDelete: SetNull)
+
+  @@index([cropName, marketName, priceDate])
+  @@index([priceDate])
+  @@map("market_prices")
+}
+
+model WeatherRecord {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  farmId          String        @map("farm_id") @db.Uuid
+  observedAt      DateTime?     @map("observed_at") @db.Timestamptz(6)
+  forecastFor     DateTime?     @map("forecast_for") @db.Timestamptz(6)
+  temperatureC    Decimal?      @map("temperature_c") @db.Decimal(6, 2)
+  feelsLikeC      Decimal?      @map("feels_like_c") @db.Decimal(6, 2)
+  humidityPercent Int?          @map("humidity_percent")
+  rainfallMm      Decimal?      @map("rainfall_mm") @db.Decimal(8, 2)
+  windSpeed       Decimal?      @map("wind_speed") @db.Decimal(8, 2)
+  condition       String?       @db.VarChar(120)
+  source          WeatherSource @default(api)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId])
+  @@index([farmId, forecastFor])
+  @@index([farmId, observedAt])
+  @@map("weather_records")
+}
+

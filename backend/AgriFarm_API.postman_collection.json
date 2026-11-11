@@ -1,0 +1,718 @@
+{
+  "info": {
+    "_postman_id": "b1b0b7e2-4f38-4e89-a5e2-63b7829a2850",
+    "name": "AgriFarm REST API",
+    "description": "Production-grade REST API collection for the AgriFarm Farm Management platform.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "farmId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fieldId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cropId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cropCycleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "taskId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "expenseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "harvestId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resetToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "API Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ramesh Patil\",\n  \"email\": \"farmer@agrifarm.dev\",\n  \"password\": \"AgriFarm123\",\n  \"phone\": \"+91 98765 43210\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"farmer@agrifarm.dev\",\n  \"password\": \"AgriFarm123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Get Profile (Me)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ramesh S. Patil\",\n  \"phone\": \"+91 98765 00000\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/me"
+          }
+        },
+        {
+          "name": "Change Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"AgriFarm123\",\n  \"newPassword\": \"NewPassword456\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/change-password"
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.resetToken) {",
+                  "  pm.collectionVariables.set('resetToken', json.data.resetToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"farmer@agrifarm.dev\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/forgot-password"
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"newPassword\": \"ResetPass789\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/reset-password"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Farms",
+      "item": [
+        {
+          "name": "List Farms",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/farms?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Create Farm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.farm) {",
+                  "  pm.collectionVariables.set('farmId', json.data.farm.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Patil Family Farm\",\n  \"description\": \"Organic mixed crop farm\",\n  \"village\": \"Ozar\",\n  \"district\": \"Nashik\",\n  \"state\": \"Maharashtra\",\n  \"country\": \"India\",\n  \"latitude\": 20.0922,\n  \"longitude\": 73.9402,\n  \"totalArea\": 12.5,\n  \"areaUnit\": \"acre\"\n}"
+            },
+            "url": "{{baseUrl}}/farms"
+          }
+        },
+        {
+          "name": "Get Farm By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/farms/{{farmId}}"
+          }
+        },
+        {
+          "name": "Update Farm",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Certified organic mixed crop farm\",\n  \"totalArea\": 14.0\n}"
+            },
+            "url": "{{baseUrl}}/farms/{{farmId}}"
+          }
+        },
+        {
+          "name": "Delete Farm",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/farms/{{farmId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fields",
+      "item": [
+        {
+          "name": "List Fields by Farm",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/farms/{{farmId}}/fields"
+          }
+        },
+        {
+          "name": "Create Field on Farm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.field) {",
+                  "  pm.collectionVariables.set('fieldId', json.data.field.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"North Field\",\n  \"area\": 6.0,\n  \"areaUnit\": \"acre\",\n  \"soilType\": \"Black cotton soil\",\n  \"irrigationType\": \"Drip\",\n  \"notes\": \"Well-draining plot\"\n}"
+            },
+            "url": "{{baseUrl}}/farms/{{farmId}}/fields"
+          }
+        },
+        {
+          "name": "Get Field By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/fields/{{fieldId}}"
+          }
+        },
+        {
+          "name": "Update Field",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"irrigationType\": \"Automated Drip\",\n  \"notes\": \"Upgraded to solar automated pump\"\n}"
+            },
+            "url": "{{baseUrl}}/fields/{{fieldId}}"
+          }
+        },
+        {
+          "name": "Delete Field",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/fields/{{fieldId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crops",
+      "item": [
+        {
+          "name": "List Crop Catalog",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/crops?search=Tomato"
+          }
+        },
+        {
+          "name": "Get Crop By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/crops/{{cropId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crop Cycles",
+      "item": [
+        {
+          "name": "List Crop Cycles",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/crop-cycles?status=active"
+          }
+        },
+        {
+          "name": "Create Crop Cycle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.cropCycle) {",
+                  "  pm.collectionVariables.set('cropCycleId', json.data.cropCycle.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fieldId\": \"{{fieldId}}\",\n  \"cropId\": \"{{cropId}}\",\n  \"season\": \"Rabi 2026-27\",\n  \"areaCultivated\": 3.0,\n  \"expectedYield\": 300,\n  \"yieldUnit\": \"quintal\",\n  \"expectedSellingPricePerUnit\": 1800,\n  \"status\": \"active\",\n  \"growthStage\": \"vegetative\"\n}"
+            },
+            "url": "{{baseUrl}}/crop-cycles"
+          }
+        },
+        {
+          "name": "Get Crop Cycle By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/crop-cycles/{{cropCycleId}}"
+          }
+        },
+        {
+          "name": "Update Crop Cycle",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"growthStage\": \"flowering\",\n  \"healthStatus\": \"healthy\"\n}"
+            },
+            "url": "{{baseUrl}}/crop-cycles/{{cropCycleId}}"
+          }
+        },
+        {
+          "name": "Delete Crop Cycle",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/crop-cycles/{{cropCycleId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/tasks?status=pending"
+          }
+        },
+        {
+          "name": "Create Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.task) {",
+                  "  pm.collectionVariables.set('taskId', json.data.task.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farmId\": \"{{farmId}}\",\n  \"fieldId\": \"{{fieldId}}\",\n  \"cropCycleId\": \"{{cropCycleId}}\",\n  \"title\": \"Morning drip irrigation cycle\",\n  \"type\": \"irrigation\",\n  \"priority\": \"high\",\n  \"dueAt\": \"2026-11-10T08:00:00Z\"\n}"
+            },
+            "url": "{{baseUrl}}/tasks"
+          }
+        },
+        {
+          "name": "Get Task By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          }
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"urgent\",\n  \"description\": \"Extend irrigation time by 45 minutes\"\n}"
+            },
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          }
+        },
+        {
+          "name": "Complete Task",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/tasks/{{taskId}}/complete"
+          }
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Expenses",
+      "item": [
+        {
+          "name": "List Expenses",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/expenses"
+          }
+        },
+        {
+          "name": "Create Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.expense) {",
+                  "  pm.collectionVariables.set('expenseId', json.data.expense.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farmId\": \"{{farmId}}\",\n  \"fieldId\": \"{{fieldId}}\",\n  \"cropCycleId\": \"{{cropCycleId}}\",\n  \"category\": \"fertilizer\",\n  \"description\": \"NPK 19:19:19 soluble fertilizer\",\n  \"amount\": 14200,\n  \"vendor\": \"Kisan Seva Kendra\"\n}"
+            },
+            "url": "{{baseUrl}}/expenses"
+          }
+        },
+        {
+          "name": "Get Expense By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/expenses/{{expenseId}}"
+          }
+        },
+        {
+          "name": "Update Expense",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 13800,\n  \"vendor\": \"Kisan Seva Kendra (Discount applied)\"\n}"
+            },
+            "url": "{{baseUrl}}/expenses/{{expenseId}}"
+          }
+        },
+        {
+          "name": "Delete Expense",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/expenses/{{expenseId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Harvests",
+      "item": [
+        {
+          "name": "List Harvests by Crop Cycle",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/crop-cycles/{{cropCycleId}}/harvests"
+          }
+        },
+        {
+          "name": "Record Harvest for Crop Cycle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.harvest) {",
+                  "  pm.collectionVariables.set('harvestId', json.data.harvest.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 75.0,\n  \"quantityUnit\": \"quintal\",\n  \"grade\": \"Grade A\",\n  \"sellingPricePerUnit\": 1850,\n  \"buyer\": \"Nashik APMC Mandi Trader\",\n  \"notes\": \"First harvest batch\"\n}"
+            },
+            "url": "{{baseUrl}}/crop-cycles/{{cropCycleId}}/harvests"
+          }
+        },
+        {
+          "name": "List All Harvests",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/harvests"
+          }
+        },
+        {
+          "name": "Get Harvest By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/harvests/{{harvestId}}"
+          }
+        },
+        {
+          "name": "Update Harvest",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sellingPricePerUnit\": 1900,\n  \"notes\": \"Premium rate negotiated\"\n}"
+            },
+            "url": "{{baseUrl}}/harvests/{{harvestId}}"
+          }
+        },
+        {
+          "name": "Delete Harvest",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/harvests/{{harvestId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Weather",
+      "item": [
+        {
+          "name": "Get Farm Weather",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/farms/{{farmId}}/weather"
+          }
+        },
+        {
+          "name": "Force Refresh Farm Weather",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/farms/{{farmId}}/weather/refresh"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Market Prices",
+      "item": [
+        {
+          "name": "List Market Prices",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/market-prices?cropName=Tomato"
+          }
+        },
+        {
+          "name": "Get Latest Market Prices",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/market-prices/latest"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard & Reports",
+      "item": [
+        {
+          "name": "Get Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/summary"
+          }
+        },
+        {
+          "name": "Get Production Report",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/production"
+          }
+        },
+        {
+          "name": "Get Expenses Report",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/expenses"
+          }
+        },
+        {
+          "name": "Get Profitability Report",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/profitability"
+          }
+        }
+      ]
+    }
+  ]
+}
+
