@@ -2,6 +2,7 @@ import './setup-env.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { computeCycleMetrics } from '../src/modules/cropCycles/cropCycles.service.js';
+import { convertAreaToFarmUnit } from '../src/modules/fields/fields.service.js';
 
 test('Business Logic: computes expected yield, estimated revenue and profit accurately', () => {
   const cycle = {
@@ -89,3 +90,32 @@ test('Business Logic: task completion percentage is 0 when no tasks exist', () =
   assert.equal(metrics.cropProgressPercentage, 0);
 });
 
+test('Business Logic: unit conversion and farm capacity allocation checks', () => {
+  // Test unit conversion
+  assert.equal(convertAreaToFarmUnit(10, 'acre', 'acre'), 10);
+  const oneHectareInAcres = convertAreaToFarmUnit(1, 'hectare', 'acre');
+  assert.ok(Math.abs(oneHectareInAcres - 2.47105) < 0.001);
+
+  // Farm capacity check logic: Farm has 8.5 acres
+  const farmCapacity = 8.5;
+  const existingFields = [
+    { area: 3.5, areaUnit: 'acre' },
+    { area: 2.0, areaUnit: 'acre' },
+  ]; // Total allocated: 5.5 acres
+
+  const totalAllocated = existingFields.reduce((sum, f) => {
+    return sum + convertAreaToFarmUnit(f.area, f.areaUnit, 'acre');
+  }, 0);
+
+  assert.equal(totalAllocated, 5.5);
+  const remaining = farmCapacity - totalAllocated; // 3.0 acres
+  assert.equal(remaining, 3.0);
+
+  // Attempting to add a field of 3.0 acres should be within capacity
+  const validAddition = 3.0;
+  assert.ok(totalAllocated + validAddition <= farmCapacity);
+
+  // Attempting to add a field of 3.1 or 4.0 acres should exceed 8.5 capacity
+  const invalidAddition = 4.0;
+  assert.ok(totalAllocated + invalidAddition > farmCapacity);
+});

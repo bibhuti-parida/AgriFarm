@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { farmsApi } from '../../api/farms.api.js';
 import { fieldsApi } from '../../api/fields.api.js';
 import { useToast } from '../../context/ToastContext.jsx';
-import { formatArea, formatDate } from '../../utils/formatters.js';
+import { formatArea } from '../../utils/formatters.js';
 import { Button } from '../../components/common/Button.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
@@ -12,15 +12,17 @@ import { Badge } from '../../components/common/Badge.jsx';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.jsx';
 import { ErrorAlert } from '../../components/common/ErrorAlert.jsx';
 import {
-  Tractor,
+  ArrowLeft,
   MapPin,
   Plus,
-  ArrowLeft,
   Grid3X3,
-  Sprout,
-  Droplets,
   Layers,
+  Droplets,
+  Sprout,
   Thermometer,
+  PieChart as PieChartIcon,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react';
 
 export const FarmDetail = () => {
@@ -31,8 +33,9 @@ export const FarmDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Field Modal State
+  // Add Field Modal State
   const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
+  const [fieldSubmitting, setFieldSubmitting] = useState(false);
   const [fieldForm, setFieldForm] = useState({
     name: '',
     area: '',
@@ -42,7 +45,6 @@ export const FarmDetail = () => {
     notes: '',
     status: 'active',
   });
-  const [fieldSubmitting, setFieldSubmitting] = useState(false);
 
   const fetchFarm = useCallback(async () => {
     setLoading(true);
@@ -61,25 +63,48 @@ export const FarmDetail = () => {
     fetchFarm();
   }, [fetchFarm]);
 
+  const fields = farm?.fields || [];
+  const farmTotalArea = Number(farm?.totalArea || 0);
+  const farmAreaUnit = farm?.areaUnit || 'acre';
+
+  const totalAllocatedArea = fields.reduce((sum, f) => sum + (Number(f.area) || 0), 0);
+  const remainingCapacity = Math.max(0, farmTotalArea - totalAllocatedArea);
+  const allocationPercentage = farmTotalArea > 0 ? Math.min(100, (totalAllocatedArea / farmTotalArea) * 100) : 0;
+  const isAtFullCapacity = remainingCapacity <= 0.001;
+
   const handleAddFieldSubmit = async (e) => {
     e.preventDefault();
+    const enteredArea = Number(fieldForm.area);
+
+    if (!enteredArea || enteredArea <= 0) {
+      toastError('Please enter a valid positive field area.');
+      return;
+    }
+
+    if (enteredArea > remainingCapacity + 0.001) {
+      toastError(
+        `Field area (${enteredArea} ${fieldForm.areaUnit}) exceeds remaining capacity of ${remainingCapacity.toFixed(2)} ${farmAreaUnit}. Total farm capacity is ${farmTotalArea} ${farmAreaUnit}.`
+      );
+      return;
+    }
+
     setFieldSubmitting(true);
     try {
       await fieldsApi.createOnFarm(id, {
         name: fieldForm.name.trim(),
-        area: Number(fieldForm.area),
+        area: enteredArea,
         areaUnit: fieldForm.areaUnit || 'acre',
         soilType: fieldForm.soilType.trim() || undefined,
         irrigationType: fieldForm.irrigationType.trim() || undefined,
         notes: fieldForm.notes.trim() || undefined,
         status: fieldForm.status,
       });
-      success('Field created successfully!');
+      success('Field parcel created successfully within farm capacity!');
       setIsFieldModalOpen(false);
       setFieldForm({
         name: '',
         area: '',
-        areaUnit: 'acre',
+        areaUnit: farmAreaUnit,
         soilType: '',
         irrigationType: '',
         notes: '',
@@ -110,7 +135,6 @@ export const FarmDetail = () => {
     );
   }
 
-  const fields = farm?.fields || [];
   const recentWeather = farm?.weatherRecords?.[0] || null;
 
   return (
@@ -138,15 +162,15 @@ export const FarmDetail = () => {
               <Badge variant={farm.status}>{farm.status}</Badge>
               <span className="text-xs text-slate-400">•</span>
               <span className="text-xs font-semibold text-slate-600">
-                Total: {formatArea(farm.totalArea, farm.areaUnit)}
+                Total Land Capacity: {formatArea(farm.totalArea, farm.areaUnit)}
               </span>
             </div>
 
             <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
-              {farm.description || 'No detailed description provided for this agricultural holding.'}
+              {farm.description || 'No description provided for this agricultural property.'}
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 pt-2">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-1">
               <div className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-emerald-600" />
                 <span>
@@ -182,6 +206,66 @@ export const FarmDetail = () => {
         </div>
       </div>
 
+      {/* Farm Land Capacity & Allocation Progress Card */}
+      <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <PieChartIcon className="w-5 h-5 text-emerald-600" />
+            <h3 className="text-sm font-bold text-slate-900">Land Allocation & Capacity</h3>
+          </div>
+          <div className="text-xs text-slate-600">
+            <span className="font-bold text-slate-900">{totalAllocatedArea.toFixed(2)}</span> of{' '}
+            <span className="font-bold text-slate-900">{farmTotalArea.toFixed(2)} {farmAreaUnit}</span> allocated ({allocationPercentage.toFixed(1)}%)
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden flex">
+          <div
+            className={`h-full transition-all duration-300 ${
+              isAtFullCapacity
+                ? 'bg-rose-500'
+                : allocationPercentage > 85
+                ? 'bg-amber-500'
+                : 'bg-emerald-500'
+            }`}
+            style={{ width: `${allocationPercentage}%` }}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-3 border-t border-slate-100 text-xs">
+          <div>
+            <span className="text-slate-400 block font-medium">Total Farm Capacity</span>
+            <span className="text-sm font-extrabold text-slate-800">
+              {farmTotalArea.toFixed(2)} {farmAreaUnit}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-slate-400 block font-medium">Allocated to Fields</span>
+            <span className="text-sm font-extrabold text-emerald-700">
+              {totalAllocatedArea.toFixed(2)} {farmAreaUnit}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-slate-400 block font-medium">Remaining Available</span>
+            <span
+              className={`text-sm font-extrabold flex items-center gap-1 ${
+                isAtFullCapacity ? 'text-rose-600' : 'text-slate-800'
+              }`}
+            >
+              {remainingCapacity.toFixed(2)} {farmAreaUnit}
+              {isAtFullCapacity && (
+                <span className="text-[10px] bg-rose-50 border border-rose-200 text-rose-700 px-1.5 py-0.5 rounded-full font-bold">
+                  100% Full
+                </span>
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Fields Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -191,8 +275,21 @@ export const FarmDetail = () => {
             </h2>
             <p className="text-xs text-slate-500">Configured plots and active crop cycles on this farm</p>
           </div>
-          <Button onClick={() => setIsFieldModalOpen(true)} icon={Plus} size="sm">
-            Add Field
+          <Button
+            onClick={() => {
+              setFieldForm((prev) => ({
+                ...prev,
+                area: remainingCapacity > 0 ? String(remainingCapacity) : '',
+                areaUnit: farmAreaUnit,
+              }));
+              setIsFieldModalOpen(true);
+            }}
+            icon={Plus}
+            size="sm"
+            disabled={isAtFullCapacity}
+            title={isAtFullCapacity ? 'Farm is at full capacity' : 'Add field parcel'}
+          >
+            {isAtFullCapacity ? 'Capacity Reached' : 'Add Field'}
           </Button>
         </div>
 
@@ -258,7 +355,18 @@ export const FarmDetail = () => {
             <p className="text-xs text-slate-500 max-w-sm mx-auto mt-0.5 mb-4">
               Add fields to partition your farm into designated plots for sowing and irrigation.
             </p>
-            <Button size="sm" onClick={() => setIsFieldModalOpen(true)} icon={Plus}>
+            <Button
+              size="sm"
+              onClick={() => {
+                setFieldForm((prev) => ({
+                  ...prev,
+                  area: String(remainingCapacity),
+                  areaUnit: farmAreaUnit,
+                }));
+                setIsFieldModalOpen(true);
+              }}
+              icon={Plus}
+            >
               Create First Field
             </Button>
           </div>
@@ -273,6 +381,28 @@ export const FarmDetail = () => {
         subtitle={`Configure a new plot under ${farm.name}`}
       >
         <form onSubmit={handleAddFieldSubmit} className="space-y-4">
+          {/* Capacity Alert in Modal */}
+          <div
+            className={`p-3.5 rounded-xl border flex items-start gap-2.5 text-xs ${
+              isAtFullCapacity
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+            }`}
+          >
+            {isAtFullCapacity ? (
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            )}
+            <div>
+              <span className="font-bold">Farm Capacity Limit: </span>
+              Total {farmTotalArea.toFixed(2)} {farmAreaUnit}. Currently allocated: {totalAllocatedArea.toFixed(2)} {farmAreaUnit}.{' '}
+              <strong className="underline">
+                {remainingCapacity.toFixed(2)} {farmAreaUnit} remaining
+              </strong>.
+            </div>
+          </div>
+
           <Input
             label="Field Name"
             required
@@ -282,23 +412,31 @@ export const FarmDetail = () => {
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Area"
-              required
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="4.5"
-              value={fieldForm.area}
-              onChange={(e) => setFieldForm({ ...fieldForm, area: e.target.value })}
-            />
+            <div>
+              <Input
+                label="Area"
+                required
+                type="number"
+                step="0.01"
+                min="0.01"
+                max={remainingCapacity > 0 ? remainingCapacity : undefined}
+                placeholder={remainingCapacity > 0 ? `Max ${remainingCapacity.toFixed(2)}` : '0.00'}
+                value={fieldForm.area}
+                onChange={(e) => setFieldForm({ ...fieldForm, area: e.target.value })}
+              />
+              {Number(fieldForm.area) > remainingCapacity + 0.001 && (
+                <p className="text-[11px] text-rose-600 mt-1 font-semibold">
+                  Exceeds remaining capacity ({remainingCapacity.toFixed(2)} {farmAreaUnit} max)
+                </p>
+              )}
+            </div>
+
             <Select
               label="Area Unit"
               options={[
+                { value: farmAreaUnit, label: farmAreaUnit.charAt(0).toUpperCase() + farmAreaUnit.slice(1) },
                 { value: 'acre', label: 'Acres' },
                 { value: 'hectare', label: 'Hectares' },
-                { value: 'bigha', label: 'Bigha' },
-                { value: 'guntha', label: 'Guntha' },
               ]}
               value={fieldForm.areaUnit}
               onChange={(e) => setFieldForm({ ...fieldForm, areaUnit: e.target.value })}
@@ -337,7 +475,12 @@ export const FarmDetail = () => {
             <Button variant="outline" onClick={() => setIsFieldModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" loading={fieldSubmitting}>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={fieldSubmitting}
+              disabled={isAtFullCapacity || Number(fieldForm.area) > remainingCapacity + 0.001}
+            >
               Add Field
             </Button>
           </div>
