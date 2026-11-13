@@ -13,6 +13,6 @@ router.use(authenticate);
 
 router.get('/', validate(listMarketPricesQuerySchema), controller.listMarketPrices);
 router.get('/latest', validate(latestPricesQuerySchema), controller.getLatestMarketPrices);
+router.post('/sync', controller.syncMarketPrices);
 
 export default router;
-

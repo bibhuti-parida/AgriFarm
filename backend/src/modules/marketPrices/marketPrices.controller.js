@@ -4,7 +4,7 @@ import { sendSuccess } from '../../utils/ApiResponse.js';
 
 export const listMarketPrices = asyncHandler(async (req, res) => {
   const { prices, providerStatus, meta } = await marketPricesService.listMarketPrices(
-    req.validated.query || req.query
+    req.validated?.query || req.query
   );
   sendSuccess(res, {
     message: 'Market prices retrieved successfully',
@@ -14,7 +14,11 @@ export const listMarketPrices = asyncHandler(async (req, res) => {
 });
 
 export const getLatestMarketPrices = asyncHandler(async (req, res) => {
-  const data = await marketPricesService.getLatestMarketPrices(req.validated.query || req.query);
+  const data = await marketPricesService.getLatestMarketPrices(req.validated?.query || req.query);
   sendSuccess(res, { message: 'Latest market prices retrieved successfully', data });
 });
 
+export const syncMarketPrices = asyncHandler(async (req, res) => {
+  const result = await marketPricesService.syncMarketPrices();
+  sendSuccess(res, { message: 'Market prices synced successfully', data: result });
+});
