@@ -179,6 +179,37 @@ test('Tasks: createTaskSchema validates type, status and priority', () => {
   assert.equal(invalidType.success, false);
 });
 
+test('Tasks: createTaskSchema and updateTaskSchema handle dueDate/dueAt compatibility', () => {
+  const resWithDueDate = createTaskSchema.body.safeParse({
+    farmId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    title: 'Morning Drip Irrigation for Onion Crop',
+    type: 'irrigation',
+    priority: 'high',
+    dueDate: '2026-11-15T00:00:00.000Z',
+  });
+  assert.equal(resWithDueDate.success, true);
+  assert.ok(resWithDueDate.data.dueAt instanceof Date);
+  assert.equal(resWithDueDate.data.dueDate, undefined);
+
+  const resWithDueAt = createTaskSchema.body.safeParse({
+    farmId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    title: 'Evening Weeding',
+    type: 'weeding',
+    dueAt: '2026-11-16T10:00:00.000Z',
+  });
+  assert.equal(resWithDueAt.success, true);
+  assert.ok(resWithDueAt.data.dueAt instanceof Date);
+
+  const updateWithDueDate = updateTaskSchema.body.safeParse({
+    farmId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    dueDate: '2026-11-20T00:00:00.000Z',
+  });
+  assert.equal(updateWithDueDate.success, true);
+  assert.ok(updateWithDueDate.data.dueAt instanceof Date);
+  assert.equal(updateWithDueDate.data.dueDate, undefined);
+  assert.equal(updateWithDueDate.data.farmId, undefined);
+});
+
 test('Expenses: createExpenseSchema validates positive amount and valid category', () => {
   const valid = createExpenseSchema.body.safeParse({
     farmId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',

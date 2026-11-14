@@ -162,6 +162,7 @@ export default function TasksList() {
 
   const handleOpenEditModal = (task) => {
     setEditingTask(task);
+    const dateVal = task.dueAt || task.dueDate;
     setFormData({
       farmId: task.farmId,
       fieldId: task.fieldId || '',
@@ -170,7 +171,7 @@ export default function TasksList() {
       description: task.description || '',
       type: task.type,
       priority: task.priority,
-      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : '',
+      dueDate: dateVal ? new Date(dateVal).toISOString().slice(0, 10) : '',
       assignedTo: task.assignedTo || '',
     });
     setFormErrors({});
@@ -211,11 +212,12 @@ export default function TasksList() {
         description: formData.description?.trim() || undefined,
         type: formData.type,
         priority: formData.priority,
-        dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : undefined,
+        dueAt: formData.dueDate ? new Date(formData.dueDate).toISOString() : null,
       };
 
       if (editingTask) {
-        await tasksApi.update(editingTask.id, payload);
+        const { farmId, ...updatePayload } = payload;
+        await tasksApi.update(editingTask.id, updatePayload);
         showToast('Task updated successfully', 'success');
       } else {
         await tasksApi.create(payload);
@@ -470,10 +472,10 @@ export default function TasksList() {
                     </td>
 
                     <td className="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">
-                      {task.dueDate ? (
+                      {task.dueAt || task.dueDate ? (
                         <span className="flex items-center gap-1 font-medium">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          {formatDate(task.dueDate)}
+                          {formatDate(task.dueAt || task.dueDate)}
                         </span>
                       ) : (
                         <span className="text-slate-400">No due date</span>
